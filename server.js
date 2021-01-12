@@ -27,8 +27,7 @@ const appQuest = function() {
         "add employee",
         "add department",
         "add role",
-        "update employee role",
-        "remove employee"
+        "Exit"
       ]
     })
     .then(function(answer) {
@@ -51,10 +50,6 @@ const appQuest = function() {
           addEmployee();
           break;
 
-        case "update employee role":
-          updateEmpRole();
-          break;
-
         case "add department":
           addDepartment();
           break;
@@ -62,6 +57,10 @@ const appQuest = function() {
         case "add role":
           addRole();
           break;
+
+        case 'Exit':
+           connection.end();
+           break;
       }
     });
 };
@@ -97,86 +96,59 @@ function viewallemployees() {
   appQuest();
 }
 
-// Add a new employee to database
 function addEmployee() {
-  inquirer
-    .prompt([
-      {
-        type: "input",
-        message: "Enter employee first name",
-        name: "firstname"
-      },
-      {
-        type: "input",
-        message: "Enter employee last name",
-        name: "lastname"
-      }
-    ])
-    .then(function(answer) {
-      connection.query(
-        "INSERT INTO employee SET ?",
-        {
-          first_name: answer.firstname,
-          last_name: answer.lastname,
-          role_id: null,
-          manager_id: null
-        },
-        function(err, answer) {
-          if (err) {
-            throw err;
-          }
-          console.table(answer);
-        }
-      );
-      appQuest();
-    });
-}
-
-// Allows user to select employee to update role
-function updateEmpRole() {
-  let allemp = [];
-  connection.query("SELECT * FROM employee", function(err, answer) {
-    // console.log(answer);
-    for (let i = 0; i < answer.length; i++) {
-      let employeeString =
-        answer[i].id + " " + answer[i].first_name + " " + answer[i].last_name;
-      allemp.push(employeeString);
-    }
-
+    connection.query("SELECT * FROM role", function (err, res) {
+    if (err) throw err;
+    
     inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "updateEmpRole",
-          message: "select employee to update role",
-          choices: allemp
-        },
-        {
-          type: "list",
-          message: "select new role",
-          choices: ["manager", "employee"],
-          name: "newrole"
-        }
-      ])
-      .then(function(answer) {
-        console.log("about to update", answer);
-        const idToUpdate = {};
-        idToUpdate.employeeId = parseInt(answer.updateEmpRole.split(" ")[0]);
-        if (answer.newrole === "manager") {
-          idToUpdate.role_id = 1;
-        } else if (answer.newrole === "employee") {
-          idToUpdate.role_id = 2;
-        }
-        connection.query(
-          "UPDATE employee SET role_id = ? WHERE id = ?",
-          [idToUpdate.role_id, idToUpdate.employeeId],
-          function(err, data) {
-            appQuest();
-          }
-        );
-      });
-  });
+        .prompt([
+            {
+                name: "first_name",
+                type: "input", 
+                message: "Employee's fist name: ",
+            },
+            {
+                name: "last_name",
+                type: "input", 
+                message: "Employee's last name: "
+            },
+            {
+                name: "role", 
+                type: "list",
+                choices: function() {
+                var roleArray = [];
+                for (let i = 0; i < res.length; i++) {
+                    roleArray.push(res[i].title);
+                }
+                return roleArray;
+                },
+                message: "What is this employee's role? "
+            }
+            ]).then(function (answer) {
+                let roleID;
+                for (let j = 0; j < res.length; j++) {
+                if (res[j].title == answer.role) {
+                    roleID = res[j].id;
+                    console.log(roleID)
+                }                  
+                }  
+                connection.query(
+                "INSERT INTO employee SET ?",
+                {
+                    first_name: answer.first_name,
+                    last_name: answer.last_name,
+                    role_id: roleID,
+                },
+                function (err) {
+                    if (err) throw err;
+                    console.log("Your employee has been added!");
+                    appQuest();
+                }
+                )
+            })
+    })
 }
+
 
 // Add a new department into the database
 function addDepartment() {
